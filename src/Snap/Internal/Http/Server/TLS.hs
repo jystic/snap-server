@@ -118,9 +118,9 @@ bindHttps bindAddress bindPort cert key = do
     Socket.listen sock 150
 
     ctx <- context
-    contextSetPrivateKeyFile  ctx key
-    contextSetCertificateFile ctx cert
-    contextSetDefaultCiphers  ctx
+    contextSetPrivateKeyFile       ctx key
+    contextSetCertificateChainFile ctx cert
+    contextSetDefaultCiphers       ctx
 
     certOK <- contextCheckPrivateKey ctx
     when (not certOK) $ throwIO $ TLSException certificateError
