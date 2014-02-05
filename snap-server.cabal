@@ -59,7 +59,7 @@ Flag portable
 
 Flag openssl
   Description: Enable https support using the HsOpenSSL library.
-  Default: False
+  Default: True
 
 
 Library
