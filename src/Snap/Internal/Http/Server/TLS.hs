@@ -40,6 +40,10 @@ import qualified OpenSSL.Session as SSL
 import           Prelude hiding (catch)
 import           Unsafe.Coerce
 import           Snap.Internal.Http.Server.Address
+
+import           System.Environment (getExecutablePath)
+import           System.FilePath ((</>), takeDirectory)
+import           Snap.Internal.Http.Server.Date (getLogDateString)
 #endif
 ------------------------------------------------------------------------------
 import           Snap.Internal.Http.Server.Backend
@@ -165,7 +169,7 @@ send tickleTimeout _ (NetworkSession _ aSSL sz) bs = go bs
     -- don't want to risk it.
     go !s = if S.null s
               then return ()
-              else do
+              else handleAll () $ do
                 SSL.write ssl a
                 tickleTimeout
                 go b
@@ -175,13 +179,22 @@ send tickleTimeout _ (NetworkSession _ aSSL sz) bs = go bs
 
 ------------------------------------------------------------------------------
 recv :: IO b -> NetworkSession -> IO (Maybe ByteString)
-recv _ (NetworkSession _ aSSL recvLen) = handle termination $ do
+recv _ (NetworkSession _ aSSL recvLen) = handleAll Nothing $ do
     b <- SSL.read ssl recvLen
     return $! if S.null b then Nothing else Just b
   where
     ssl = unsafeCoerce aSSL
 
-    termination :: ConnectionAbruptlyTerminated -> IO (Maybe ByteString)
-    termination = const $ return Nothing
+
+handleAll :: forall a. a -> IO a -> IO a
+handleAll d = handle go
+  where
+    go :: SomeException -> IO a
+    go e = do
+        exe <- getExecutablePath
+        let path = takeDirectory exe </> "ssl-errors.log"
+        time <- getLogDateString
+        appendFile path $ S.unpack time ++ " " ++ show e ++ "\n"
+        return d
 
 #endif
